@@ -104,3 +104,7 @@ add_test(NAME issue-383-additional-properties COMMAND issue-383-additional-prope
 add_executable(issue-383-conditional-default issue-383-conditional-default.cpp)
 target_link_libraries(issue-383-conditional-default nlohmann_json_schema_validator)
 add_test(NAME issue-383-conditional-default COMMAND issue-383-conditional-default)
+
+add_executable(issue-383-trivial-false-schema issue-383-trivial-false-schema.cpp)
+target_link_libraries(issue-383-trivial-false-schema nlohmann_json_schema_validator)
+add_test(NAME issue-383-trivial-false-schema COMMAND issue-383-trivial-false-schema)

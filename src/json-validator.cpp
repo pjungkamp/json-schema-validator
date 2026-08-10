@@ -984,36 +984,25 @@ public:
 	    : schema(root) {}
 };
 
-class boolean_type : public schema
+class true_schema : public schema
 {
 	void validate(const json::json_pointer &, const json &, json_patch &, error_handler &) const override {}
 
 public:
-	boolean_type(json &, root_schema *root)
+	true_schema(json &, root_schema *root)
 	    : schema(root) {}
 };
 
-class boolean : public schema
+class false_schema : public schema
 {
-	bool true_;
 	void validate(const json::json_pointer &ptr, const json &instance, json_patch &, error_handler &e) const override
 	{
-		if (!true_) { // false schema
-			// empty array
-			// switch (instance.type()) {
-			// case json::value_t::array:
-			//	if (instance.size() != 0) // valid false-schema
-			//		e.error(ptr, instance, "false-schema required empty array");
-			//	return;
-			//}
-
-			e.error(ptr, instance, "instance invalid as per false-schema");
-		}
+		e.error(ptr, instance, "instance invalid as per false-schema");
 	}
 
 public:
-	boolean(json &sch, root_schema *root)
-	    : schema(root), true_(sch) {}
+	false_schema(json &, root_schema *root)
+	    : schema(root) {}
 };
 
 class required : public schema
@@ -1084,7 +1073,10 @@ class object : public schema
 
 			// check additionalProperties as a last resort
 			if (!a_prop_or_pattern_matched && additionalProperties_) {
-				additionalProperties_->validate(ptr / p.key(), p.value(), patch, e);
+				if (dynamic_cast<false_schema const *>(additionalProperties_.get()))
+					e.error(ptr, p.value(), "found unexpected property '" + p.key() + "' in object");
+				else
+					additionalProperties_->validate(ptr / p.key(), p.value(), patch, e);
 			}
 		}
 
@@ -1227,16 +1219,19 @@ class array : public schema
 		else {
 			auto item = items_.cbegin();
 			for (auto &i : instance) {
-				std::shared_ptr<schema> item_validator;
+				schema const *item_validator;
 				if (item == items_.cend())
-					item_validator = additionalItems_;
+					item_validator = additionalItems_.get();
 				else {
-					item_validator = *item;
+					item_validator = item->get();
 					item++;
 				}
 
 				if (!item_validator)
 					break;
+
+				if (dynamic_cast<false_schema const *>(item_validator))
+					e.error(ptr / index, i, "found unexpected index " + std::to_string(index) + " in array");
 
 				item_validator->validate(ptr / index, i, patch, e);
 			}
@@ -1327,7 +1322,7 @@ std::shared_ptr<schema> type_schema::make(json &schema,
 	case json::value_t::string:
 		return std::make_shared<string>(schema, root);
 	case json::value_t::boolean:
-		return std::make_shared<boolean_type>(schema, root);
+		return std::make_shared<true_schema>(schema, root);
 	case json::value_t::object:
 		return std::make_shared<object>(schema, root, uris);
 	case json::value_t::array:
@@ -1366,10 +1361,12 @@ std::shared_ptr<schema> schema::make(json &schema,
 	std::shared_ptr<::schema> sch;
 
 	// boolean schema
-	if (schema.type() == json::value_t::boolean)
-		sch = std::make_shared<boolean>(schema, root);
-	else if (schema.type() == json::value_t::object) {
-
+	if (schema.type() == json::value_t::boolean) {
+		if (schema)
+			sch = std::make_shared<true_schema>(schema, root);
+		else
+	        	sch = std::make_shared<false_schema>(schema, root);
+	} else if (schema.type() == json::value_t::object) {
 		auto attr = schema.find("$id"); // if $id is present, this schema can be referenced by this ID
 		                                // as an additional URI
 		if (attr != schema.end()) {
