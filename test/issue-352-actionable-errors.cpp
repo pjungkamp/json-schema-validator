@@ -36,9 +36,10 @@ struct recorded_validation_error {
 
 class collecting_error_handler : public error_handler
 {
-	void error(const validation_error &error, const json &instance) override
+	bool error(const validation_error &error, const json &instance) override
 	{
 		errors.push_back({error.instance_location, instance, error.message, error.keyword, error.details});
+		return false;
 	}
 
 public:

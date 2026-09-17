@@ -36,10 +36,11 @@ static void loader(const json_uri &uri, json &schema)
 
 class custom_error_handler : public nlohmann::json_schema::basic_error_handler
 {
-	void error(const nlohmann::json_schema::validation_error &error, const json &instance) override
+	bool error(const nlohmann::json_schema::validation_error &error, const json &instance) override
 	{
 		nlohmann::json_schema::basic_error_handler::error(error, instance);
 		std::cerr << "ERROR: '" << error.instance_location << "' - '" << instance << "': " << error.message << "\n";
+		return false;
 	}
 };
 

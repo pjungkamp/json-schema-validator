@@ -159,9 +159,10 @@ public:
 
 	// New handlers should override this structured callback. By default it forwards to
 	// the original callback below so existing handlers remain source-compatible.
-	virtual void error(const validation_error &error, const json &instance)
+	virtual bool error(const validation_error &error, const json &instance)
 	{
 		this->error(error.instance_location, instance, error.message);
+		return false;
 	}
 
 	virtual void error(const json::json_pointer & /*ptr*/,
@@ -177,9 +178,9 @@ class JSON_SCHEMA_VALIDATOR_API basic_error_handler : public error_handler
 	bool error_{false};
 
 public:
-	void error(const validation_error &error, const json &instance) override
+	bool error(const validation_error &error, const json &instance) override
 	{
-		error_handler::error(error, instance);
+		return error_handler::error(error, instance);
 	}
 
 	void error(const json::json_pointer & /*ptr*/,

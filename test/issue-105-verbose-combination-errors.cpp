@@ -126,9 +126,10 @@ public:
 	}
 
 private:
-	auto error(const nlohmann::json_schema::validation_error &error, const nlohmann::json &instance) -> void override
+	auto error(const nlohmann::json_schema::validation_error &error, const nlohmann::json &instance) -> bool override
 	{
 		m_error_list.push_back(ErrorEntry{error.instance_location, instance, error.message});
+		return false;
 	}
 
 	ErrorEntryList m_error_list;
